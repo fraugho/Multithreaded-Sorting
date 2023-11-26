@@ -1,12 +1,15 @@
 # Multithreaded-Sorting
 ![image](https://github.com/fraugho/Multithreaded-Sorting/assets/144178952/cd26d3ce-62bd-4e24-a71b-ea251dbf20d5)
 
-# Linux Install
+# Python Linux Install
 ```pipx install flask```
 ```pipx run flask run```
 
-# Windows Install
+# Python Windows Install
 Install Dependences
 - flask
-
 Run Program
+
+# Rust Linux Install
+```cd sorting-rust```
+```cargo run```
