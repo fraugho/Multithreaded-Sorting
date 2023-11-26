@@ -6,6 +6,6 @@
 ```pipx run flask run```
 
 # Windows Install
-install dependences
+Install Dependences
 - flask
 Run Program
