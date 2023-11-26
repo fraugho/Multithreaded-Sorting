@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sorting Algorithm Performance</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+        .container { 
+            width: 80%; 
+            margin: auto; 
+            padding: 20px; 
+        }
+        #resultsChart { 
+            max-width: 600px;
+            margin: 20px auto;
+        }        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sorting Algorithm Performance Test</h1>
+        <button id="runTest">Run Test</button>
+        <canvas id="resultsChart"></canvas> <!-- Canvas for Chart.js graph -->
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Include Chart.js -->
+    <script>
+        document.getElementById('runTest').addEventListener('click', function() {
+            fetch('/get_results')
+                .then(response => response.json()) // Expect JSON response
+                .then(data => {
+                    // Create the bar chart
+                    var ctx = document.getElementById('resultsChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: Object.keys(data), // Algorithm names
+                            datasets: [{
+                                label: 'Execution Time (seconds)',
+                                data: Object.values(data), // Execution times
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        });
+    </script>
+</body>
+</html>
