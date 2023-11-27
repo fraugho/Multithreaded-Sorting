@@ -30,13 +30,20 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Include Chart.js -->
     <script>
+        var myChart = null; // Initialize a variable to keep track of the chart
+
         document.getElementById('runTest').addEventListener('click', function() {
             fetch('/get_results')
                 .then(response => response.json()) // Expect JSON response
                 .then(data => {
-                    // Create the bar chart
                     var ctx = document.getElementById('resultsChart').getContext('2d');
-                    new Chart(ctx, {
+
+                    // If a chart already exists, destroy it before creating a new one
+                    if (myChart) {
+                        myChart.destroy();
+                    }
+
+                    myChart = new Chart(ctx, {
                         type: 'bar',
                         data: {
                             labels: Object.keys(data), // Algorithm names
