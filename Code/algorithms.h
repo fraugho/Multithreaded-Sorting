@@ -3,50 +3,123 @@
 #include <stack>
 #include <thread>
 #include <vector>
+#include <chrono> //remember kids never ever write your own time libraries
+#include <random>
+#include <climits>
 #include <algorithm>
+#include <fstream>
+
+using namespace std;
+const int NUM_CORES = 6;//thread::hardware_concurrency()/2; //thread::hardware_concurrency() measures the total number of threads the system supports divide by 2 for the number of logical cores,which is the faster implemenation. Becuase hyperthreading doesn't actually make anything faster it just allows every core to handle two threads at around half speed.
+//don't have six cores or have more too bad sucker i gotta fix some math
+
+thread* threads = new thread[NUM_CORES]; //NUM_CORES is how many cores your system supports
+
+void genThreads(void (*func)(int*,unsigned long),int* arr,unsigned long arrLen) {
+	for(int i=0;i<NUM_CORES;i++)
+		threads[i] = thread(func,arr+(i*(arrLen/NUM_CORES)),arrLen/NUM_CORES+(arrLen%NUM_CORES));
+	return;
+}
+
+void closeThreads() {
+	for(int i=0;i<NUM_CORES;i++) {
+		if(threads[i].joinable())
+			threads[i].join();
+	}
+}
+
+void bubSort(int* arr,unsigned long arrLen) {
+	int temp;
+	for(int i=0;i<arrLen-1;i++) {
+		for(int j=0;j<(arrLen-i-1);j++) {
+			if(arr[j+1]<arr[j]) {
+				temp=arr[j+1];
+				arr[j+1]=arr[j];
+				arr[j]=temp;
+			}
+		}
+	}
+
+}
+void cppSort(int* arr,unsigned long arrLen) {
+	sort(arr,arr+arrLen); //a test of the default cpp sorting library
+}
+
+void inSort(int* arr,unsigned long arrLen) {
+	int k,j;
+	for(int i=1;i<arrLen;i++) {
+	k=arr[i];
+	j=i-1;
+		for(int h=0;j>=0&&arr[j]>k;j--)
+			arr[j+1]=arr[j];
+		arr[j+1]=k;
+	}
+
+}
+
+void mergeSort(int* arr,unsigned long arrLen) {
+	if(arrLen==1)
+		return;
+	mergeSort(arr,arrLen/2);
+	mergeSort(arr+(arrLen/2),(arrLen/2)+(arrLen%2));
+
+	inplace_merge(arr,arr+arrLen/2,arr+arrLen); //i realized over the course of writing my own merge function that cpp's is definetly better and i needed to use merge for another purpose so why not use the better one
+}
+
+void printArr(int* arr,unsigned long arrLen) {
+	for(int i=0;i<arrLen;i++)
+		cout << arr[i] << " ";
+	cout << endl;
+}
+
+bool checkArr(int* arr,unsigned long arrLen,int* arr2, unsigned long arrLen2) {
+	if(arrLen!=arrLen2)
+		return false;
+	for(int i=0;i<arrLen;i++) {
+		if(arr[i]!=arr2[i])
+			return false;
+	}
+	return true;
+}
+
+void mergeWrapper(int* start1,int* end1,int* end2) { //since inplace_merge is a cpp library you can't use a function pointer with it so I just made a wrapper
+	inplace_merge(start1,end1,end2);
+}
+
+auto multiThread(void (*func)(int*,unsigned long),int* arr,unsigned long arrLen,bool threaded) { //none of the sorting programs are in place just because that makes test benching more space efficient
+	auto start = std::chrono::high_resolution_clock::now();
+	if(threaded) {
+		genThreads(func,arr,arrLen); //use a divide and conquer scheme with threads
+		closeThreads();
+		int t = NUM_CORES/2;
+		for(int j=t;j>0;j--) {
+			int* start1;
+			int* end2;
+			int* end1;
+			for(int i=0;i<j;i++) {
+				start1 = arr+((i)*(2*(t-j+1))*(arrLen/NUM_CORES));
+				end2 = start1+((2*(t-j+1))*(arrLen/NUM_CORES))+((i+1>=j)*(arrLen%NUM_CORES)); //mod to account for uneven arrays
+				end1 = end2-(((t-j+1-(j==1)))*(arrLen/NUM_CORES))-((i+1>=j)*(arrLen%NUM_CORES));
+				if((arr+arrLen)<end1) //TODO this logic only works for 6 cores
+				threads[i] = thread(mergeWrapper,start1,end1,end2);
+
+			}
+			closeThreads();
+		}
+	}
+	else {
+	    func(arr,arrLen);
+    }
+	auto end = std::chrono::high_resolution_clock::now();
+	return std::chrono::duration<double>(end - start).count();
+}
 
 void heapify(int arr[], int n, int i);
-int partition(int arr[], int low, int high);
 
 void swap(int* a, int* b) {
     int t = *a;
     *a = *b;
     *b = t;
-}
-
-void bubble_sort(int array[], int start, int end) {
-    int temp;
-    for (int i = start; i < end; i++) {
-        for (int j = start; j < end - (i - start) - 1; j++) {
-            if (array[j] > array[j + 1]) {
-                temp = array[j];
-                array[j] = array[j+1];
-                array[j+1] = temp;
-            }
-        }
-    }
-}
-
-void multi_threaded_bubble_sort(int array[], int size, int num_threads) {
-    std::vector<std::thread> threads;
-    int chunk_size = size / num_threads;
-
-    for (int i = 0; i < num_threads; ++i) {
-        int start = i * chunk_size;
-        int end = (i + 1) * chunk_size;
-
-        if (i == num_threads - 1) {
-            end = size;
-        }
-
-        threads.emplace_back(bubble_sort, array, start, end);
-    }
-
-    for (auto &thread : threads) {
-        thread.join();
-    }
-
-    bubble_sort(array, 0, size);
 }
 
 void merge(int arr[], int left, int mid, int right) {
@@ -86,30 +159,6 @@ void merge(int arr[], int left, int mid, int right) {
     }
 }
 
-void mergeSort(int arr[], int left, int right) {
-    if (left >= right)
-        return;
-
-    int mid = left + (right - left) / 2;
-    mergeSort(arr, left, mid);
-    mergeSort(arr, mid + 1, right);
-    merge(arr, left, mid, right);
-}
-
-void mergeSortParallel(int arr[], int left, int right) {
-    if (left >= right) return;
-
-    int mid = left + (right - left) / 2;
-
-    std::thread t1(mergeSort, arr, left, mid);
-    std::thread t2(mergeSort, arr, mid + 1, right);
-
-    t1.join();
-    t2.join();
-
-    merge(arr, left, mid, right);
-}
-
 void heapify(int arr[], int n, int i) {
     int largest = i;
     int left = 2 * i + 1;
@@ -133,7 +182,7 @@ void buildMaxHeap(int arr[], int n) {
     }
 }
 
-void heapSort(int arr[], int n) {
+void heapSort(int arr[], unsigned long n) {
     buildMaxHeap(arr, n);
 
     for (int i = n - 1; i > 0; i--) {
@@ -146,144 +195,4 @@ void buildMaxHeapSegment(int arr[], int n, int start, int end) {
     for (int i = end; i >= start; i--) {
         heapify(arr, n, i);
     }
-}
-
-void buildMaxHeapParallel(int arr[], int n) {
-    int mid = n / 4;
-
-    std::thread t1(buildMaxHeapSegment, arr, n, 0, mid);
-    std::thread t2(buildMaxHeapSegment, arr, n, mid + 1, n / 2 - 1);
-
-    t1.join();
-    t2.join();
-
-    for (int i = n / 2 - 1; i >= 0; i--) {
-        heapify(arr, n, i);
-    }
-}
-
-void heapSortParallel(int arr[], int n) {
-    buildMaxHeapParallel(arr, n);
-
-    for (int i = n - 1; i > 0; i--) {
-        swap(&arr[0], &arr[i]);
-        heapify(arr, i, 0);
-    }
-}
-
-int partition(int arr[], int low, int high) {
-    int pivot = arr[high];
-    int i = (low - 1);
-
-    for (int j = low; j <= high - 1; j++) {
-        if (arr[j] < pivot) {
-            i++;
-            swap(&arr[i], &arr[j]);
-        }
-    }
-    swap(&arr[i + 1], &arr[high]);
-    return (i + 1);
-}
-
-void iterativeQuickSort(int arr[], int n) {
-    std::stack<int> s;
-    s.push(0);
-    s.push(n - 1);
-
-    while (!s.empty()) {
-        int h = s.top();
-        s.pop();
-        int l = s.top();
-        s.pop();
-
-        int p = partition(arr, l, h);
-
-        if (p - 1 > l) {
-            s.push(l);
-            s.push(p - 1);
-        }
-        if (p + 1 < h) {
-            s.push(p + 1);
-            s.push(h);
-        }
-    }
-}
-
-void quicksort_thread(int arr[], int start, int end);
-void final_pass_quicksort(int arr[], int n, int num_threads) {
-    int chunk_size = n / num_threads;
-    std::vector<int> boundary_indices;
-
-    for (int i = 1; i < num_threads; ++i) {
-        int boundary = i * chunk_size;
-        if (arr[boundary - 1] > arr[boundary]) {
-            boundary_indices.push_back(boundary);
-        }
-    }
-
-    for (int boundary : boundary_indices) {
-        int start = boundary - 1;
-        while (start > 0 && arr[start - 1] > arr[start]) {
-            --start;
-        }
-
-        int end = boundary;
-        while (end < n - 1 && arr[end] > arr[end + 1]) {
-            ++end;
-        }
-
-        quicksort_thread(arr, start, end);
-    }
-}
-
-void quicksort_thread(int arr[], int start, int end) {
-    std::stack<int> s;
-    s.push(start);
-    s.push(end);
-
-    while (!s.empty()) {
-        int h = s.top();
-        s.pop();
-        int l = s.top();
-        s.pop();
-
-        int p = partition(arr, l, h);
-
-        if (p - 1 > l) {
-            s.push(l);
-            s.push(p - 1);
-        }
-        if (p + 1 < h) {
-            s.push(p + 1);
-            s.push(h);
-        }
-    }
-}
-
-void multi_threaded_quick_sort(int arr[], int n, int num_threads) {
-    std::vector<std::thread> threads;
-    int chunk_size = n / num_threads;
-
-    for (int i = 0; i < num_threads; ++i) {
-        int start = i * chunk_size;
-        int end = (i + 1) * chunk_size - 1;
-
-        if (i == num_threads - 1) {
-            end = n - 1;
-        }
-
-        threads.emplace_back(quicksort_thread, arr, start, end);
-    }
-
-    for (auto &thread : threads) {
-        thread.join();
-    }
-
-    final_pass_quicksort(arr, n, num_threads);
-}
-
-void printArray(int arr[], int n) {
-    for (int i = 0; i < n; ++i)
-        std::cout << arr[i] << " ";
-    std::cout << "\n";
 }
