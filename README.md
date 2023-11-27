@@ -1,5 +1,5 @@
 # Multithreaded-Sorting
-![Demo Animation](demo.gif)
+![Demo Animation](demo2.gif)
 
 # Python Linux Install
 ```pipx install flask```
