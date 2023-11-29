@@ -11,7 +11,7 @@
 
 using namespace std;
 const int NUM_CORES = 6;//thread::hardware_concurrency()/2; //thread::hardware_concurrency() measures the total number of threads the system supports divide by 2 for the number of logical cores,which is the faster implemenation. Becuase hyperthreading doesn't actually make anything faster it just allows every core to handle two threads at around half speed.
-//don't have six cores or have more too bad sucker i gotta fix some math
+
 
 thread* threads = new thread[NUM_CORES]; //NUM_CORES is how many cores your system supports
 
